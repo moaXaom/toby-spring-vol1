@@ -3,7 +3,7 @@ package springbook.user.dao;
 import java.sql.Connection;
 import java.sql.DriverManager;
 
-class SimpleConnectionMaker implements ConnectionMaker {
+class DConnectionMaker implements ConnectionMaker {
 
     @Override
     public Connection makeNewConnection() throws Exception {

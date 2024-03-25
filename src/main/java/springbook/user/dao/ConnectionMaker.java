@@ -1,2 +1,8 @@
-package springbook.user.dao;public interface ConnectionMaker {
+package springbook.user.dao;
+
+import java.sql.Connection;
+
+public interface ConnectionMaker {
+
+    Connection makeNewConnection() throws Exception;
 }
