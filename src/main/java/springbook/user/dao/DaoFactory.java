@@ -1,23 +1,30 @@
 package springbook.user.dao;
 
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.datasource.SimpleDriverDataSource;
+
+import javax.sql.DataSource;
+
+@Configuration
 public class DaoFactory {
 
+    @Bean
     public UserDao userDao() {
-        ConnectionMaker connectionMaker = connectionMaker();
-        return new UserDao(connectionMaker);
+        UserDao userDao = new UserDao();
+        userDao.setDataSource(dataSource());
+        return userDao;
     }
 
-    public UserDao accountDao() {
-        ConnectionMaker connectionMaker = connectionMaker();
-        return new UserDao(connectionMaker);
-    }
+    @Bean
+    public DataSource dataSource() {
+        SimpleDriverDataSource dataSource = new SimpleDriverDataSource();
 
-    public UserDao messageDao() {
-        ConnectionMaker connectionMaker = connectionMaker();
-        return new UserDao(connectionMaker);
-    }
+        dataSource.setDriverClass(com.mysql.cj.jdbc.Driver.class);
+        dataSource.setUrl("jdbc:mysql://localhost/moamoa");
+        dataSource.setUsername("moamoa");
+        dataSource.setPassword("moamoa");
 
-    public ConnectionMaker connectionMaker() {
-        return new DConnectionMaker();
+        return dataSource;
     }
 }

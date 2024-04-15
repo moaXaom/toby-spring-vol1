@@ -1,11 +1,14 @@
 package springbook.user.dao;
 
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.GenericXmlApplicationContext;
 import springbook.user.domain.User;
 
 public class UserDaoTest {
 
     public static void main(String[] args) throws Exception {
-        UserDao userDao = new DaoFactory().userDao();
+        ApplicationContext context = new GenericXmlApplicationContext("/applicationContext.xml");
+        UserDao userDao = context.getBean("userDao", UserDao.class);
 
         User user = new User();
         user.setId("verus");
