@@ -3,6 +3,7 @@ package springbook.user.dao;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 
 import org.springframework.dao.EmptyResultDataAccessException;
 import springbook.user.domain.User;
@@ -11,24 +12,31 @@ import javax.sql.DataSource;
 
 public class UserDao {
 
+	private JdbcContext jdbcContext;
     private DataSource dataSource;
 
-    public void setDataSource(DataSource dataSource) {
+	public void setJdbcContext(final JdbcContext jdbcContext) {
+		this.jdbcContext = jdbcContext;
+	}
+
+	public void setDataSource(DataSource dataSource) {
         this.dataSource = dataSource;
     }
 
     public void add(User user) throws Exception {
-        Connection c = dataSource.getConnection();
+		this.jdbcContext.workWithStatementStrategy(
+			new StatementStrategy() {
+				@Override
+				public PreparedStatement makePreparedStatement(final Connection c) throws SQLException {
+					PreparedStatement ps = c.prepareStatement("insert into users(id, name, password) values(?, ?, ?)");
+					ps.setString(1, user.getId());
+					ps.setString(2, user.getName());
+					ps.setString(3, user.getPassword());
 
-        PreparedStatement ps = c.prepareStatement("insert into users(id, name, password) values(?, ?, ?)");
-        ps.setString(1, user.getId());
-        ps.setString(2, user.getName());
-        ps.setString(3, user.getPassword());
-
-        ps.executeUpdate();
-
-        ps.close();
-        c.close();
+					return ps;
+				}
+			}
+		);
     }
 
     public User get(String id) throws Exception {
@@ -57,28 +65,45 @@ public class UserDao {
     }
 
     public void deleteAll() throws Exception {
-        Connection connection = dataSource.getConnection();
+		this.jdbcContext.executeSql("delete from users");
+	}
 
-        PreparedStatement preparedStatement = connection.prepareStatement(("delete from users"));
-        preparedStatement.executeUpdate();
+	public int getCount() throws Exception {
+		Connection c = null;
+		PreparedStatement ps = null;
+		ResultSet rs = null;
 
-        preparedStatement.close();
-        connection.close();
-    }
+		try {
+			c = dataSource.getConnection();
+			ps = c.prepareStatement("select count(*) from users");
 
-    public int getCount() throws Exception {
-        Connection connection = dataSource.getConnection();
+			rs = ps.executeQuery();
+			rs.next();
+			return rs.getInt(1);
+		} catch (SQLException e) {
+			throw e;
+		} finally {
+			if (rs != null) {
+				try {
+					rs.close();
+				} catch (SQLException e) {
 
-        PreparedStatement preparedStatement = connection.prepareStatement("select count(*) from users");
+				}
+			}
+			if (ps != null) {
+				try {
+					ps.close();
+				} catch (SQLException e) {
 
-        ResultSet resultSet = preparedStatement.executeQuery();
-        resultSet.next();
-        int count = resultSet.getInt(1);
+				}
+			}
+			if (c != null) {
+				try {
+					c.close();
+				} catch (SQLException e) {
 
-        resultSet.close();
-        preparedStatement.close();
-        connection.close();
-
-        return count;
+				}
+			}
+		}
     }
 }

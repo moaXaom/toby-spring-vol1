@@ -30,7 +30,10 @@ class UserDaoTest {
     public void setUp() {
         userDao = new UserDao();
         DataSource dataSource = new SingleConnectionDataSource("jdbc:mysql://localhost/moamoa", "moamoa", "moamoa", true);
-        userDao.setDataSource(dataSource);
+		final JdbcContext jdbcContext = new JdbcContext();
+		jdbcContext.setDataSource(dataSource);
+		userDao.setDataSource(dataSource);
+		userDao.setJdbcContext(jdbcContext);
 
         this.user1 = new User("1", "111", "1111");
         this.user2 = new User("2", "222", "2222");
