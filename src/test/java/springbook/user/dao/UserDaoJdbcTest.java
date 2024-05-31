@@ -3,18 +3,31 @@ package springbook.user.dao;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.sql.SQLException;
 import java.util.List;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.jdbc.datasource.SingleConnectionDataSource;
+import org.springframework.jdbc.support.SQLErrorCodeSQLExceptionTranslator;
+import org.springframework.test.context.ContextConfiguration;
 import springbook.user.domain.User;
+import springbook.user.exception.DuplicateUserIdException;
 
-class UserDaoTest {
+@ExtendWith({org.springframework.test.context.junit.jupiter.SpringExtension.class})
+@ContextConfiguration(locations = "/applicationContext.xml")
+class UserDaoJdbcTest {
+
+    @Autowired
     private UserDao userDao;
+
+    @Autowired
+    private DataSource dataSource;
 
     private User user1;
     private User user2;
@@ -22,10 +35,6 @@ class UserDaoTest {
 
     @BeforeEach
     public void setUp() {
-        userDao = new UserDao();
-        DataSource dataSource = new SingleConnectionDataSource("jdbc:mysql://localhost/moamoa", "moamoa", "moamoa", true);
-        userDao.setDataSource(dataSource);
-
         this.user1 = new User("1", "111", "1111");
         this.user2 = new User("2", "222", "2222");
         this.user3 = new User("3", "333", "3333");
@@ -103,6 +112,31 @@ class UserDaoTest {
         userDao.deleteAll();
         users = userDao.getAll();
         assertEquals(0, users.size());
+    }
+
+    @Test
+    void duplicateKey() {
+        userDao.deleteAll();
+
+        userDao.add(user1);
+        assertThrows(DuplicateUserIdException.class, () -> userDao.add(user1));
+    }
+
+    @Test
+    void sqlExceptioNTranslate() {
+        // given
+        userDao.deleteAll();
+
+        // when & then
+        try {
+            userDao.add(user1);
+            userDao.add(user1);
+        } catch (DuplicateUserIdException ex) {
+            final SQLException sqlEx = (SQLException) ex.getCause().getCause();
+            final SQLErrorCodeSQLExceptionTranslator translator = new SQLErrorCodeSQLExceptionTranslator(this.dataSource);
+
+            assertEquals(DuplicateKeyException.class, translator.translate(null, null, sqlEx).getClass());
+        }
     }
 
     private void checkSameUser(User user1, User user2) {
