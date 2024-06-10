@@ -16,6 +16,8 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.support.SQLErrorCodeSQLExceptionTranslator;
 import org.springframework.test.context.ContextConfiguration;
+
+import springbook.user.domain.Level;
 import springbook.user.domain.User;
 import springbook.user.exception.DuplicateUserIdException;
 
@@ -35,9 +37,9 @@ class UserDaoJdbcTest {
 
     @BeforeEach
     public void setUp() {
-        this.user1 = new User("1", "111", "1111");
-        this.user2 = new User("2", "222", "2222");
-        this.user3 = new User("3", "333", "3333");
+        user1 = new User("1", "111", "1111", Level.BASIC, 1, 0);
+        user2 = new User("2", "222", "2222", Level.SILVER, 55, 10);
+        user3 = new User("3", "333", "3333", Level.GOLD, 100, 40);
     }
 
     @Test
@@ -51,12 +53,10 @@ class UserDaoJdbcTest {
         assertEquals(userDao.getCount(), 2);
 
         User userGet1 = userDao.get(user1.getId());
-        assertEquals(userGet1.getName(), user1.getName());
-        assertEquals(userGet1.getPassword(), user1.getPassword());
+        checkSameUser(userGet1, user1);
 
         User userGet2 = userDao.get(user2.getId());
-        assertEquals(userGet2.getName(), user2.getName());
-        assertEquals(userGet2.getPassword(), user2.getPassword());
+        checkSameUser(userGet2, user2);
     }
 
     @Test
@@ -139,9 +139,32 @@ class UserDaoJdbcTest {
         }
     }
 
+    @Test
+    public void update() {
+        userDao.deleteAll();
+
+        userDao.add(user1);
+        userDao.add(user2);
+
+        user1.setName("디우");
+        user1.setPassword("그린론");
+        user1.setLevel(Level.GOLD);
+        user1.setLogin(1000);
+        user1.setRecommend(999);
+        userDao.update(user1);
+
+        User user1update = userDao.get(user1.getId());
+        checkSameUser(user1, user1update);
+        User user2same = userDao.get(user2.getId());
+        checkSameUser(user2, user2same);
+    }
+
     private void checkSameUser(User user1, User user2) {
         assertEquals(user1.getId(), user2.getId());
         assertEquals(user1.getName(), user2.getName());
         assertEquals(user1.getPassword(), user2.getPassword());
+        assertEquals(user1.getLevel(), user2.getLevel());
+        assertEquals(user1.getLogin(), user2.getLogin());
+        assertEquals(user1.getRecommend(), user2.getRecommend());
     }
 }
