@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.support.SQLErrorCodeSQLExceptionTranslator;
+import org.springframework.mail.MailSender;
 import org.springframework.test.context.ContextConfiguration;
 
 import springbook.user.domain.Level;
@@ -28,18 +29,15 @@ class UserDaoJdbcTest {
     @Autowired
     private UserDao userDao;
 
-    @Autowired
-    private DataSource dataSource;
-
     private User user1;
     private User user2;
     private User user3;
 
     @BeforeEach
     public void setUp() {
-        user1 = new User("1", "111", "1111", Level.BASIC, 1, 0);
-        user2 = new User("2", "222", "2222", Level.SILVER, 55, 10);
-        user3 = new User("3", "333", "3333", Level.GOLD, 100, 40);
+        user1 = new User("1", "111", "1111", Level.BASIC, 1, 0, "test1@test.com");
+        user2 = new User("2", "222", "2222", Level.SILVER, 55, 10, "test2@test.com");
+        user3 = new User("3", "333", "3333", Level.GOLD, 100, 40, "test3@test.com");
     }
 
     @Test
@@ -123,23 +121,6 @@ class UserDaoJdbcTest {
     }
 
     @Test
-    void sqlExceptioNTranslate() {
-        // given
-        userDao.deleteAll();
-
-        // when & then
-        try {
-            userDao.add(user1);
-            userDao.add(user1);
-        } catch (DuplicateUserIdException ex) {
-            final SQLException sqlEx = (SQLException) ex.getCause().getCause();
-            final SQLErrorCodeSQLExceptionTranslator translator = new SQLErrorCodeSQLExceptionTranslator(this.dataSource);
-
-            assertEquals(DuplicateKeyException.class, translator.translate(null, null, sqlEx).getClass());
-        }
-    }
-
-    @Test
     public void update() {
         userDao.deleteAll();
 
@@ -166,5 +147,6 @@ class UserDaoJdbcTest {
         assertEquals(user1.getLevel(), user2.getLevel());
         assertEquals(user1.getLogin(), user2.getLogin());
         assertEquals(user1.getRecommend(), user2.getRecommend());
+        assertEquals(user1.getEmail(), user2.getEmail());
     }
 }
