@@ -1,5 +1,11 @@
 package springbook.user.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+
+import java.lang.reflect.Proxy;
+import java.util.Arrays;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -7,20 +13,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.MailSender;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
-
-import java.sql.Connection;
-import java.util.Arrays;
-import java.util.List;
-
-import javax.sql.DataSource;
-
 import org.springframework.transaction.PlatformTransactionManager;
 import springbook.user.dao.UserDao;
 import springbook.user.domain.Level;
 import springbook.user.domain.User;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
 
 @ExtendWith({org.springframework.test.context.junit.jupiter.SpringExtension.class})
 @ContextConfiguration(locations = "/applicationContext.xml")
@@ -32,6 +28,9 @@ public class UserServiceTest {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private UserServiceImpl userServiceImpl;
 
     @Autowired
     private UserDao userDao;
@@ -59,25 +58,31 @@ public class UserServiceTest {
 
     @Test
     void upgradeLevels() throws Exception {
-        for (User user : users) {
-            userDao.add(user);
-        }
+        final UserServiceImpl userServiceImpl = new UserServiceImpl();
 
-        MockMailSender mockMailSender = new MockMailSender();
-        userService.setMailSender(mockMailSender);
+        final MockUserDao mockUserDao = new MockUserDao(this.users);
+
+        userServiceImpl.setUserDao(mockUserDao);
+
+        final MockMailSender mockMailSender = new MockMailSender();
+        userServiceImpl.setMailSender(mockMailSender);
 
         userService.upgradeLevels();
 
-        checkLevelUpgraded(users.get(0), false);
-        checkLevelUpgraded(users.get(1), true);
-        checkLevelUpgraded(users.get(2), false);
-        checkLevelUpgraded(users.get(3), true);
-        checkLevelUpgraded(users.get(4), false);
+        final List<User> updated = mockUserDao.getUpdated();
+        assertEquals(updated.size(), 2);
+        checkUserAndLevel(updated.get(0), "joytouch", Level.SILVER);
+        checkUserAndLevel(updated.get(1), "nadbute1", Level.GOLD);
 
         List<String> request = mockMailSender.getRequests();
         assertEquals(request.size(), 2);
         assertEquals(request.get(0), users.get(1).getEmail());
         assertEquals(request.get(1), users.get(3).getEmail());
+    }
+
+    private void checkUserAndLevel(final User user, final String userName, final Level level) {
+        assertEquals(user.getName(), userName);
+        assertEquals(user.getLevel(), level);
     }
 
     @Test
@@ -96,18 +101,20 @@ public class UserServiceTest {
     }
 
     @Test
-    public void upgradeAllOrNothing() throws Exception {
-        UserService testUserService = new TestUserService(users.get(3).getId());
-        testUserService.setUserDao(this.userDao);
-        testUserService.setTransactionManager(this.transactionManager);
-        testUserService.setMailSender(mailSender);
+    public void upgradeAllOrNothing() {
+        final TransactionHandler transactionHandler = new TransactionHandler();
+        transactionHandler.setTarget(new UserServiceTx());
+        transactionHandler.setTransactionManager(transactionManager);
+        transactionHandler.setPattern("upgradeLevels");
+
+        final UserService txUserService = (UserService) Proxy.newProxyInstance(getClass().getClassLoader(), new Class[]{UserService.class}, transactionHandler);
 
         for (User user : users) {
             userDao.add(user);
         }
 
         try {
-            testUserService.upgradeLevels();
+            txUserService.upgradeLevels();
             fail("TestUserServiceException expected");
         } catch (Exception e) {
         }

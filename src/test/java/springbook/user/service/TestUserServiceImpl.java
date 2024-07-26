@@ -2,10 +2,10 @@ package springbook.user.service;
 
 import springbook.user.domain.User;
 
-public class TestUserService extends UserServiceImpl {
+public class TestUserServiceImpl extends UserServiceImpl {
     private String id;
 
-    public TestUserService(String id) {
+    public TestUserServiceImpl(String id) {
         this.id = id;
     }
 
@@ -17,4 +17,3 @@ public class TestUserService extends UserServiceImpl {
         super.upgradeLevel(user);
     }
 }
-
